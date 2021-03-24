@@ -1,27 +1,33 @@
 #!/usr/bin/env python3
 import sys, getopt
 
-PAM_DATETIME = 0
-PAM_DATE = 1
-PAM_TIME = 2
-PAM_TYPE = 3
-PAM_F = 5
-PAM_FM_PRIME = 6
-PAM_PAR = 7
-PAM_YIELD = 8
-PAM_ETR = 9
-PAM_NPQ = 10
-PAM_FZERO = 11.
-PAM_FM = 12
-PAM_FV_FM = 13
+SEP = ";"
+
+COL_DATETIME = "Datetime"
+COL_DATE = "Date"
+COL_TIME = "Time"
+COL_TYPE = "Type"
+COL_NO = "No."
+COL_1F = "1:F"
+COL_1FM = "1:Fm'"
+COL_1PAR = "1:PAR"
+COL_1Y = "1:Y (II)"
+COL_1ETR = "1:ETR"
+COL_1FO = "1:Fo'"
+COL_1NPQ = "1:NPQ"
+COL_FVFM = "1:Fv/Fm"
+column_position = {}
 
 
 def calc_rETR(par, yii):
     return '-' if yii == '-' else round(float(par) * float(yii), 2)
 
 
-# check columns to make sure they match what is below. If not, change below
-def process_id_line(id_fields, raw_lines):
+def get_value(raw_fields, column_name):
+    return raw_fields[column_position[column_name]].strip("\"\n")
+
+
+def process_id_line(id_fields, raw_lines, output_file):
     date = id_fields[0].strip("\"")
     time_id = id_fields[1].strip("\"")
     id = id_fields[2].strip("\"")
@@ -33,88 +39,90 @@ def process_id_line(id_fields, raw_lines):
     for raw_line in raw_lines:
         raw_fields = raw_line.split(";")
         if len(raw_fields) > 4:
-            record_type = raw_fields[PAM_TYPE].strip("\"")
+            record_type = get_value(raw_fields, COL_TYPE)
         else:
             record_type = "N/A"
         if record_type == "SLCE" and f_section_counter > 0:
             if f_section_counter != 9:
-                print("Error: less than 9 F records found in section ({})".format(f_section_counter))
+                output_file.write("Error: less than 9 F records found in section ({})".format(f_section_counter))
             break
         elif date in raw_line and time_id in raw_line and record_type == "FO":
             f_section_counter += 1
-            time = raw_fields[PAM_TIME].strip("\"")
-            f = raw_fields[PAM_F].strip("\"")
-            fm_prime = raw_fields[PAM_FM_PRIME].strip("\"")
-            par = raw_fields[PAM_PAR].strip("\"")
-            yii = raw_fields[PAM_YIELD].strip("\"")
-            etr = raw_fields[PAM_ETR].strip("\"")
-            npq = raw_fields[PAM_NPQ].strip("\"")
-            f0 = raw_fields[PAM_FZERO].strip("\"")
-            fm = raw_fields[PAM_FM].strip("\"")
-            fvfm_raw = raw_fields[PAM_FV_FM].strip("\"\n")
+            time = get_value(raw_fields, COL_TIME)
+            f = get_value(raw_fields, COL_1F)
+            fm_prime = get_value(raw_fields, COL_1FM)
+            par = get_value(raw_fields, COL_1PAR)
+            yii = get_value(raw_fields, COL_1Y)
+            etr = get_value(raw_fields, COL_1ETR)
+            npq = get_value(raw_fields, COL_1NPQ)
+            f0 = get_value(raw_fields, COL_1FO)
+            fm = get_value(raw_fields, COL_1FM)
+            # TODO: FVFM is an optional column
+            fvfm_raw = get_value(raw_fields, COL_FVFM)
             rETR = calc_rETR(par, yii)
             # if fvfm_raw == '-' or fvfm_id == '-' or float(fvfm_id) != float(fvfm_raw):
-            #     print("{};{};Error: Fv/Fm from ID file ({}) doesn't match Fv/Fm from raw file ({}).".format(date, time, fvfm_id, fvfm_raw))
+            #     output_file.write("{};{};Error: Fv/Fm from ID file ({}) doesn't match Fv/Fm from raw file ({}).".format(date, time, fvfm_id, fvfm_raw))
             #     return
-            print("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
+            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
                 date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, 0.0, rETR, notes))
         elif record_type == "F" and f_section_counter > 0:
             f_section_counter += 1
-            time = raw_fields[PAM_TIME].strip("\"")
-            f = raw_fields[PAM_F].strip("\"")
-            fm_prime = raw_fields[PAM_FM_PRIME].strip("\"")
-            par = raw_fields[PAM_PAR].strip("\"")
-            yii = raw_fields[PAM_YIELD].strip("\"")
-            etr = raw_fields[PAM_ETR].strip("\"")
-            npq = raw_fields[PAM_NPQ].strip("\"")
-            f0 = raw_fields[PAM_FZERO].strip("\"")
-            fm = raw_fields[PAM_FM].strip("\"")
-            fvfm_raw = raw_fields[PAM_FV_FM].strip("\"\n")
+            time = get_value(raw_fields, COL_TIME)
+            f = get_value(raw_fields, COL_1F)
+            fm_prime = get_value(raw_fields, COL_1FM)
+            par = get_value(raw_fields, COL_1PAR)
+            yii = get_value(raw_fields, COL_1Y)
+            etr = get_value(raw_fields, COL_1ETR)
+            npq = get_value(raw_fields, COL_1NPQ)
+            f0 = get_value(raw_fields, COL_1FO)
+            fm = get_value(raw_fields, COL_1FM)
+            fvfm_raw = get_value(raw_fields, COL_FVFM)
             rETR = calc_rETR(par, yii)
             if npq_zero == -1:
                 npq_zero = -1 if npq == '-' else float(npq.replace(' ', ''))
             if f_section_counter == 9:
                 deltaNPQ = '-' if npq == '-' else round(float(npq.replace(' ', '')) - npq_zero, 3)
-            print("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
+            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
                 date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, deltaNPQ, rETR, notes))
 
 
-# print('Date;Time;ID;F;F0;Fm;Fm\';Epar;Y(II);ETR;Fv/Fm;NPQ;deltaNPQ;rETR;Notes')
-#
-
-
-def open_files(data_path, ids_path, columns_path, output_path):
-    print(data_path)
-    with open(ids_path) as id_file:
-        id_lines = id_file.readlines()
-
+def open_files(data_path, ids_path, output_path):
     with open(data_path) as raw_file:
         raw_lines = raw_file.readlines()
 
-    # TODO: read the column names from the raw file to figure out their positions
+    # read the column names from the raw file to figure out their positions
+    first_line = raw_lines[0].split(SEP)
+    for idx, col in enumerate(first_line):
+        column_position[col.strip("\"\n")] = idx
+    if COL_DATETIME not in column_position.keys():
+        exit("The first line in the raw PAM data file must contain the headers like Datetime, etc.")
 
-    for id_line in id_lines:
-        id_file_columns = id_line.split(";")
-        if id_file_columns[0] != "\"Date\"":
-            process_id_line(id_file_columns, raw_lines)
+    with open(ids_path) as id_file:
+        id_lines = id_file.readlines()
+    if '"Date"' not in id_lines[0]:
+        exit('The first line in the sample ID file must contain the headers like "Date";"Time";"ID";"Fv/Fm";"Notes"')
+
+    with open(output_path, "w") as output_file:
+        output_file.write("Date;Time;ID;F;F0;Fm;Fm\';Epar;Y(II);ETR;Fv/Fm;NPQ;deltaNPQ;rETR;Notes")
+        for id_line in id_lines:
+            id_file_columns = id_line.split(SEP)
+            if id_file_columns[0] != "\"Date\"":
+                process_id_line(id_file_columns, raw_lines, output_file)
 
 
 def main(argv):
     data_path = ''
     ids_path = ''
-    columns_path = ''
     output_path = ''
-    opts, args = getopt.getopt(argv, "d:i:c:o:", ["data=", "ids=", "columns=", "output="])
+    opts, args = getopt.getopt(argv, "d:i:o:", ["data=", "ids=", "output="])
     for opt, arg in opts:
         if opt in ("-d", "--data"):
             data_path = arg
         elif opt in ("-i", "--ids"):
             ids_path = arg
-        elif opt in ("-c", "--columns"):
-            columns_path = arg
         elif opt in ("-o", "--output"):
             output_path = arg
-    open_files(data_path, ids_path, columns_path, output_path)
+    open_files(data_path, ids_path, output_path)
 
 
 if __name__ == "__main__":
