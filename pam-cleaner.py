@@ -24,8 +24,10 @@ def calc_rETR(par, yii):
 
 
 def get_value(raw_fields, column_name):
-    return raw_fields[column_position[column_name]].strip("\"\n")
-
+    if column_name in column_position:
+        return raw_fields[column_position[column_name]].strip("\"\n")
+    else:
+        return None
 
 def process_id_line(id_fields, raw_lines, output_file):
     date = id_fields[0].strip("\"")
@@ -57,13 +59,12 @@ def process_id_line(id_fields, raw_lines, output_file):
             npq = get_value(raw_fields, COL_1NPQ)
             f0 = get_value(raw_fields, COL_1FO)
             fm = get_value(raw_fields, COL_1FM)
-            # TODO: FVFM is an optional column
             fvfm_raw = get_value(raw_fields, COL_FVFM)
             rETR = calc_rETR(par, yii)
             # if fvfm_raw == '-' or fvfm_id == '-' or float(fvfm_id) != float(fvfm_raw):
             #     output_file.write("{};{};Error: Fv/Fm from ID file ({}) doesn't match Fv/Fm from raw file ({}).".format(date, time, fvfm_id, fvfm_raw))
             #     return
-            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
+            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
                 date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, 0.0, rETR, notes))
         elif record_type == "F" and f_section_counter > 0:
             f_section_counter += 1
@@ -82,7 +83,7 @@ def process_id_line(id_fields, raw_lines, output_file):
                 npq_zero = -1 if npq == '-' else float(npq.replace(' ', ''))
             if f_section_counter == 9:
                 deltaNPQ = '-' if npq == '-' else round(float(npq.replace(' ', '')) - npq_zero, 3)
-            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}".format(
+            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
                 date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, deltaNPQ, rETR, notes))
 
 
@@ -103,7 +104,7 @@ def open_files(data_path, ids_path, output_path):
         exit('The first line in the sample ID file must contain the headers like "Date";"Time";"ID";"Fv/Fm";"Notes"')
 
     with open(output_path, "w") as output_file:
-        output_file.write("Date;Time;ID;F;F0;Fm;Fm\';Epar;Y(II);ETR;Fv/Fm;NPQ;deltaNPQ;rETR;Notes")
+        output_file.write("Date;Time;ID;F;F0;Fm;Fm\';Epar;Y(II);ETR;Fv/Fm;NPQ;deltaNPQ;rETR;Notes\n")
         for id_line in id_lines:
             id_file_columns = id_line.split(SEP)
             if id_file_columns[0] != "\"Date\"":
