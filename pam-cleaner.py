@@ -19,6 +19,26 @@ COL_FVFM = "1:Fv/Fm"
 column_position = {}
 
 
+class OutputRow:
+    ETR_FACTOR = 0.84
+    PSII_FACTOR = 0.5
+    # yii = (fm - f0) / fm
+    # etr = par * ETR_FACTOR * PSII_FACTOR * yii
+
+    def __init__(self, raw_fields):
+        self.time = get_value(raw_fields, COL_TIME)
+        self.f = get_value(raw_fields, COL_1F)
+        self.fm_prime = get_value(raw_fields, COL_1FM)
+        self.par = get_value(raw_fields, COL_1PAR)
+        self.yii = get_value(raw_fields, COL_1Y)
+        self.etr = get_value(raw_fields, COL_1ETR)
+        self.npq = get_value(raw_fields, COL_1NPQ)
+        self.f0 = get_value(raw_fields, COL_1FO)
+        self.fm = get_value(raw_fields, COL_1FM)
+        self.fvfm_raw = get_value(raw_fields, COL_FVFM)
+        self.rETR = calc_rETR(self.par, self.yii)
+
+
 def calc_rETR(par, yii):
     return '-' if yii == '-' else round(float(par) * float(yii), 2)
 
@@ -28,6 +48,7 @@ def get_value(raw_fields, column_name):
         return raw_fields[column_position[column_name]].strip("\"\n")
     else:
         return None
+
 
 def process_id_line(id_fields, raw_lines, output_file):
     date = id_fields[0].strip("\"")
@@ -50,41 +71,18 @@ def process_id_line(id_fields, raw_lines, output_file):
             break
         elif date in raw_line and time_id in raw_line and record_type == "FO":
             f_section_counter += 1
-            time = get_value(raw_fields, COL_TIME)
-            f = get_value(raw_fields, COL_1F)
-            fm_prime = get_value(raw_fields, COL_1FM)
-            par = get_value(raw_fields, COL_1PAR)
-            yii = get_value(raw_fields, COL_1Y)
-            etr = get_value(raw_fields, COL_1ETR)
-            npq = get_value(raw_fields, COL_1NPQ)
-            f0 = get_value(raw_fields, COL_1FO)
-            fm = get_value(raw_fields, COL_1FM)
-            fvfm_raw = get_value(raw_fields, COL_FVFM)
-            rETR = calc_rETR(par, yii)
-            # if fvfm_raw == '-' or fvfm_id == '-' or float(fvfm_id) != float(fvfm_raw):
-            #     output_file.write("{};{};Error: Fv/Fm from ID file ({}) doesn't match Fv/Fm from raw file ({}).".format(date, time, fvfm_id, fvfm_raw))
-            #     return
+            o = OutputRow(raw_fields)
             output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
-                date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, 0.0, rETR, notes))
+                date, o.time, id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr, o.fvfm_raw, o.npq, 0.0, o.rETR, notes))
         elif record_type == "F" and f_section_counter > 0:
             f_section_counter += 1
-            time = get_value(raw_fields, COL_TIME)
-            f = get_value(raw_fields, COL_1F)
-            fm_prime = get_value(raw_fields, COL_1FM)
-            par = get_value(raw_fields, COL_1PAR)
-            yii = get_value(raw_fields, COL_1Y)
-            etr = get_value(raw_fields, COL_1ETR)
-            npq = get_value(raw_fields, COL_1NPQ)
-            f0 = get_value(raw_fields, COL_1FO)
-            fm = get_value(raw_fields, COL_1FM)
-            fvfm_raw = get_value(raw_fields, COL_FVFM)
-            rETR = calc_rETR(par, yii)
+            o = OutputRow(raw_fields)
             if npq_zero == -1:
-                npq_zero = -1 if npq == '-' else float(npq.replace(' ', ''))
+                npq_zero = -1 if o.npq == '-' else float(o.npq.replace(' ', ''))
             if f_section_counter == 9:
-                deltaNPQ = '-' if npq == '-' else round(float(npq.replace(' ', '')) - npq_zero, 3)
+                deltaNPQ = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - npq_zero, 3)
             output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
-                date, time, id, f, f0, fm, fm_prime, par, yii, etr, fvfm_raw, npq, deltaNPQ, rETR, notes))
+                date, o.time, id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr, o.fvfm_raw, o.npq, deltaNPQ, o.rETR, notes))
 
 
 def open_files(data_path, ids_path, output_path):
