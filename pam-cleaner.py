@@ -9,7 +9,8 @@ COL_TIME = "Time"
 COL_TYPE = "Type"
 COL_NO = "No."
 COL_1F = "1:F"
-COL_1FM = "1:Fm'"
+COL_1FM = "1:Fm"
+COL_1FM_PRIME = "1:Fm'"
 COL_1PAR = "1:PAR"
 COL_1Y = "1:Y (II)"
 COL_1ETR = "1:ETR"
@@ -22,13 +23,11 @@ column_position = {}
 class OutputRow:
     ETR_FACTOR = 0.84
     PSII_FACTOR = 0.5
-    # yii = (fm - f0) / fm
-    # etr = par * ETR_FACTOR * PSII_FACTOR * yii
 
     def __init__(self, raw_fields):
         self.time = get_value(raw_fields, COL_TIME)
         self.f = get_value(raw_fields, COL_1F)
-        self.fm_prime = get_value(raw_fields, COL_1FM)
+        self.fm_prime = get_value(raw_fields, COL_1FM_PRIME)
         self.par = get_value(raw_fields, COL_1PAR)
         self.yii = get_value(raw_fields, COL_1Y)
         self.etr = get_value(raw_fields, COL_1ETR)
@@ -36,6 +35,10 @@ class OutputRow:
         self.f0 = get_value(raw_fields, COL_1FO)
         self.fm = get_value(raw_fields, COL_1FM)
         self.fvfm_raw = get_value(raw_fields, COL_FVFM)
+        if self.yii == "-":
+            self.yii = round((float(self.fm_prime) - float(self.f)) / float(self.fm_prime), 3)
+        if self.etr == "-":
+            self.etr = round(float(self.par) * self.ETR_FACTOR * self.PSII_FACTOR * float(self.yii), 2)
         self.rETR = calc_rETR(self.par, self.yii)
 
 
