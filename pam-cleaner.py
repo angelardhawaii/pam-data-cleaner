@@ -20,6 +20,7 @@ COL_FVFM = "1:Fv/Fm"
 column_position = {}
 
 
+
 class OutputRow:
     ETR_FACTOR = 0.84
     PSII_FACTOR = 0.5
@@ -35,9 +36,9 @@ class OutputRow:
         self.f0 = get_value(raw_fields, COL_1FO)
         self.fm = get_value(raw_fields, COL_1FM)
         self.fvfm_raw = get_value(raw_fields, COL_FVFM)
-        if self.yii == "-":
+        if self.yii == "-" and float(self.fm_prime) != 0:
             self.yii = round((float(self.fm_prime) - float(self.f)) / float(self.fm_prime), 3)
-        if self.etr == "-":
+        if self.yii != "-" and self.etr == "-":
             self.etr = round(float(self.par) * self.ETR_FACTOR * self.PSII_FACTOR * float(self.yii), 2)
         self.rETR = calc_rETR(self.par, self.yii)
 
