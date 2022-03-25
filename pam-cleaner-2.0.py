@@ -2,7 +2,7 @@
 import getopt
 import sys
 
-SEP = ","
+OUTPUT_SEPARATOR = ","
 
 COL_DATETIME = "Datetime"
 COL_DATE = "Date"
@@ -18,12 +18,15 @@ COL_1ETR = "1:ETR"
 COL_1FO = "1:Fo'"
 COL_1NPQ = "1:NPQ"
 COL_FVFM = "1:Fv/Fm"
-column_position = {}
 
 SAMPLE_ID_POS = 6
 
 OUTPUT_COLUMNS = \
     ['Date', 'Time', 'ID', 'F', 'F0', 'Fm', 'Fm\'', 'Epar', 'Y(II)', 'ETR', 'Fv/Fm', 'NPQ', 'deltaNPQ', 'rETR']
+
+
+column_position = {}
+input_separator = ''
 
 
 class OutputRow:
@@ -87,12 +90,13 @@ def get_record_type(raw_fields):
 
 def write_list(f, values):
     string_list = [str(v) for v in values]
-    f.write('{}\n'.format(SEP.join(string_list)))
+    f.write('{}\n'.format(OUTPUT_SEPARATOR.join(string_list)))
 
 
 def process_raw_lines(raw_lines, output_file):
+    light_curve = {}
     for raw_line in raw_lines:
-        raw_fields = raw_line.split(SEP)
+        raw_fields = raw_line.split(input_separator)
         record_type = get_record_type(raw_fields)
         if record_type == 'SLCS':
             light_curve = LightCurve(raw_fields[SAMPLE_ID_POS].strip("\"\n"))
@@ -118,13 +122,16 @@ def process_raw_lines(raw_lines, output_file):
 
 
 def open_files(data_path, output_path):
+    global column_position
+    global input_separator
     with open(data_path) as raw_file:
         raw_lines = raw_file.readlines()
 
     # read the column names from the raw file to figure out their positions
     for line in raw_lines:
+        input_separator = ';' if ';' in line else ','
         if 'Datetime' in line:
-            line_with_headers = line.split(SEP)
+            line_with_headers = line.split(input_separator)
             for idx, col in enumerate(line_with_headers):
                 column_position[col.strip("\"\n")] = idx
             break
