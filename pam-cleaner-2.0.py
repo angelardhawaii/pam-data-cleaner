@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, getopt
+import getopt
+import sys
 
 SEP = ","
 
@@ -20,6 +21,9 @@ COL_FVFM = "1:Fv/Fm"
 column_position = {}
 
 SAMPLE_ID_POS = 6
+
+OUTPUT_COLUMNS = \
+    ['Date', 'Time', 'ID', 'F', 'F0', 'Fm', 'Fm\'', 'Epar', 'Y(II)', 'ETR', 'Fv/Fm', 'NPQ', 'deltaNPQ', 'rETR']
 
 
 class OutputRow:
@@ -42,10 +46,10 @@ class OutputRow:
             self.yii = round((float(self.fm_prime) - float(self.f)) / float(self.fm_prime), 3)
         if self.yii != "-" and self.etr == "-":
             self.etr = round(float(self.par) * self.ETR_FACTOR * self.PSII_FACTOR * float(self.yii), 2)
-        self.rETR = calc_rETR(self.par, self.yii)
+        self.r_etr = calc_r_etr(self.par, self.yii)
 
 
-def calc_rETR(par, yii):
+def calc_r_etr(par, yii):
     return '-' if yii == '-' else round(float(par) * float(yii), 2)
 
 
@@ -53,13 +57,18 @@ def get_value(raw_fields, column_name):
     if column_name in column_position:
         return raw_fields[column_position[column_name]].strip("\"\n")
     else:
-        return None
+        return 'NA'
+
+
+def write_list(f, values):
+    string_list = [str(v) for v in values]
+    f.write('{}\n'.format(SEP.join(string_list)))
 
 
 def process_raw_lines(raw_lines, output_file):
     f_section_counter = 0
     npq_zero = -1
-    deltaNPQ = 0.0
+    delta_npq = 0.0
     sample_id = ""
     for raw_line in raw_lines:
         raw_fields = raw_line.split(SEP)
@@ -73,24 +82,25 @@ def process_raw_lines(raw_lines, output_file):
                 break
             f_section_counter = 0
             npq_zero = -1
-            deltaNPQ = 0.0
+            delta_npq = 0.0
             sample_id = ""
         elif record_type == "SLCS":
             f_section_counter += 1
             sample_id = raw_fields[SAMPLE_ID_POS].strip("\"\n")
-        elif record_type == "F0":
+        elif record_type == "FO":
             o = OutputRow(raw_fields)
-            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
-                o.date, o.time, sample_id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr, o.fvfm_raw, o.npq, 0.0, o.rETR))
+            write_list(output_file, [o.date, o.time, sample_id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr,
+                        o.fvfm_raw, o.npq, 0.0, o.r_etr])
+
         elif record_type == "F" and f_section_counter > 0:
             f_section_counter += 1
             o = OutputRow(raw_fields)
             if npq_zero == -1:
                 npq_zero = -1 if o.npq == '-' else float(o.npq.replace(' ', ''))
             if f_section_counter == 9:
-                deltaNPQ = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - npq_zero, 3)
-            output_file.write("{};{};{};{};{};{};{};{};{};{};{};{};{};{}\n".format(
-                o.date, o.time, id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr, o.fvfm_raw, o.npq, deltaNPQ, o.rETR))
+                delta_npq = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - npq_zero, 3)
+            write_list(output_file, [o.date, o.time, sample_id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr,
+                        o.fvfm_raw, o.npq, delta_npq, o.r_etr])
 
 
 def open_files(data_path, output_path):
@@ -108,7 +118,7 @@ def open_files(data_path, output_path):
         exit("At least one line in the raw PAM data file must contain the headers like Datetime, etc.")
 
     with open(output_path, "w") as output_file:
-        output_file.write("Date;Time;ID;F;F0;Fm;Fm\';Epar;Y(II);ETR;Fv/Fm;NPQ;deltaNPQ;rETR\n")
+        output_file.write(SEP.join(OUTPUT_COLUMNS))
         process_raw_lines(raw_lines, output_file)
 
 
