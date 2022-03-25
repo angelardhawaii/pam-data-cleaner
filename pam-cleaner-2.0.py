@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import getopt
+import glob
+import os.path
+import pathlib
 import sys
 
 OUTPUT_SEPARATOR = ","
@@ -109,24 +112,21 @@ def process_raw_lines(raw_lines, output_file):
         elif record_type == 'FO':
             o = OutputRow(raw_fields)
             light_curve.f = o.f
-            light_curve.append([o.date, o.time, light_curve.sample_id, o.f, o.f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
-                        o.fvfm_raw, o.npq, 0.0, o.r_etr])
+            light_curve.append([o.date, o.time, light_curve.sample_id, o.f, o.f, o.fm, o.fm_prime, o.par,
+                                o.yii, o.etr, o.fvfm_raw, o.npq, 0.0, o.r_etr])
         elif record_type == "F":
             o = OutputRow(raw_fields)
             if light_curve.npq_zero == -1:
                 light_curve.npq_zero = -1 if o.npq == '-' else float(o.npq.replace(' ', ''))
             if light_curve.get_number_of_records() == 10:
-                light_curve.delta_npq = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - light_curve.npq_zero, 3)
-            light_curve.append([o.date, o.time, light_curve.sample_id, o.f, light_curve.f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
-                        o.fvfm_raw, o.npq, light_curve.delta_npq, o.r_etr])
+                light_curve.delta_npq = '-' if o.npq == '-' \
+                    else round(float(o.npq.replace(' ', '')) - light_curve.npq_zero, 3)
+            light_curve.append([o.date, o.time, light_curve.sample_id, o.f, light_curve.f, o.fm, o.fm_prime, o.par,
+                                o.yii, o.etr, o.fvfm_raw, o.npq, light_curve.delta_npq, o.r_etr])
 
 
-def open_files(data_path, output_path):
-    global column_position
+def determine_column_positions(raw_lines):
     global input_separator
-    with open(data_path) as raw_file:
-        raw_lines = raw_file.readlines()
-
     # read the column names from the raw file to figure out their positions
     for line in raw_lines:
         input_separator = ';' if ';' in line else ','
@@ -138,9 +138,19 @@ def open_files(data_path, output_path):
     if COL_DATETIME not in column_position.keys():
         exit("At least one line in the raw PAM data file must contain the headers like Datetime, etc.")
 
+
+def open_files(data_path, output_path):
+    global column_position
+    output_dir = os.path.dirname(output_path)
+    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+    filenames = glob.glob(data_path)
     with open(output_path, "w") as output_file:
         write_list(output_file, OUTPUT_COLUMNS)
-        process_raw_lines(raw_lines, output_file)
+        for filename in filenames:
+            with open(filename) as raw_file:
+                raw_lines = raw_file.readlines()
+            determine_column_positions(raw_lines)
+            process_raw_lines(raw_lines, output_file)
 
 
 def main(argv):
