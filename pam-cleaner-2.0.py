@@ -51,7 +51,6 @@ class OutputRow:
 
 class LightCurve:
     def __init__(self, sample_id):
-        self.f_section_counter = 0
         self.npq_zero = -1
         self.delta_npq = 0.0
         self.sample_id = sample_id
@@ -59,6 +58,9 @@ class LightCurve:
 
     def append(self, values):
         self.line_buffer.append(values)
+
+    def get_number_of_records(self):
+        return len(self.line_buffer)
 
     def write_to_file(self, file_handle):
         for line in self.line_buffer:
@@ -89,33 +91,27 @@ def write_list(f, values):
 
 
 def process_raw_lines(raw_lines, output_file):
-    f_section_counter = 0
     for raw_line in raw_lines:
         raw_fields = raw_line.split(SEP)
         record_type = get_record_type(raw_fields)
         if record_type == 'SLCS':
-            f_section_counter += 1
-            sample_id = raw_fields[SAMPLE_ID_POS].strip("\"\n")
             light_curve = LightCurve(raw_fields[SAMPLE_ID_POS].strip("\"\n"))
         elif record_type == 'SLCE':
-            if f_section_counter != 10:
-                print('Warning: less than 10 records ({}) found in line curve ({})'.
-                      format(f_section_counter, light_curve.get_first_date_time()))
+            if light_curve.get_number_of_records() != 9:
+                print('Warning: less than 9 records ({}) found in line curve ({})'.
+                      format(light_curve.get_number_of_records(), light_curve.get_first_date_time()))
             else:
                 light_curve.write_to_file(output_file)
-            f_section_counter = 0
         elif record_type == 'FO':
-            f_section_counter += 1
             o = OutputRow(raw_fields)
             light_curve.f = o.f
             light_curve.append([o.date, o.time, light_curve.sample_id, o.f, o.f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
                         o.fvfm_raw, o.npq, 0.0, o.r_etr])
         elif record_type == "F":
-            f_section_counter += 1
             o = OutputRow(raw_fields)
             if light_curve.npq_zero == -1:
                 light_curve.npq_zero = -1 if o.npq == '-' else float(o.npq.replace(' ', ''))
-            if f_section_counter == 9:
+            if light_curve.get_number_of_records() == 10:
                 light_curve.delta_npq = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - light_curve.npq_zero, 3)
             light_curve.append([o.date, o.time, light_curve.sample_id, o.f, light_curve.f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
                         o.fvfm_raw, o.npq, light_curve.delta_npq, o.r_etr])
