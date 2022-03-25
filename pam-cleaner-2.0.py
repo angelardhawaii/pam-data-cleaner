@@ -70,6 +70,7 @@ def process_raw_lines(raw_lines, output_file):
     npq_zero = -1
     delta_npq = 0.0
     sample_id = ""
+    f = -1
     for raw_line in raw_lines:
         raw_fields = raw_line.split(SEP)
         if len(raw_fields) > 4:
@@ -77,7 +78,7 @@ def process_raw_lines(raw_lines, output_file):
         else:
             record_type = "N/A"
         if record_type == "SLCE" and f_section_counter > 0:
-            if f_section_counter != 9:
+            if f_section_counter != 10:
                 output_file.write("Error: less than 9 F records found in section ({})".format(f_section_counter))
                 break
             f_section_counter = 0
@@ -88,8 +89,10 @@ def process_raw_lines(raw_lines, output_file):
             f_section_counter += 1
             sample_id = raw_fields[SAMPLE_ID_POS].strip("\"\n")
         elif record_type == "FO":
+            f_section_counter += 1
             o = OutputRow(raw_fields)
-            write_list(output_file, [o.date, o.time, sample_id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr,
+            f = o.f
+            write_list(output_file, [o.date, o.time, sample_id, o.f, o.f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
                         o.fvfm_raw, o.npq, 0.0, o.r_etr])
 
         elif record_type == "F" and f_section_counter > 0:
@@ -99,7 +102,7 @@ def process_raw_lines(raw_lines, output_file):
                 npq_zero = -1 if o.npq == '-' else float(o.npq.replace(' ', ''))
             if f_section_counter == 9:
                 delta_npq = '-' if o.npq == '-' else round(float(o.npq.replace(' ', '')) - npq_zero, 3)
-            write_list(output_file, [o.date, o.time, sample_id, o.f, o.f0, o.fm, o.fm_prime, o.par, o.yii, o.etr,
+            write_list(output_file, [o.date, o.time, sample_id, o.f, f, o.fm, o.fm_prime, o.par, o.yii, o.etr,
                         o.fvfm_raw, o.npq, delta_npq, o.r_etr])
 
 
@@ -118,7 +121,7 @@ def open_files(data_path, output_path):
         exit("At least one line in the raw PAM data file must contain the headers like Datetime, etc.")
 
     with open(output_path, "w") as output_file:
-        output_file.write(SEP.join(OUTPUT_COLUMNS))
+        write_list(output_file, OUTPUT_COLUMNS)
         process_raw_lines(raw_lines, output_file)
 
 
