@@ -82,6 +82,10 @@ def calc_r_etr(par, yii):
 
 def get_value(raw_fields, column_name):
     if column_name in column_position:
+        p = column_position[column_name]
+        if p >= len(raw_fields):
+            print(f'Cannot find data for column {column_name} in row {raw_fields}', file=sys.stderr)
+            exit(1)
         return raw_fields[column_position[column_name]].strip("\"\n")
     else:
         return 'NA'
