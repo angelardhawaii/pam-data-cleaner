@@ -109,8 +109,9 @@ def process_raw_lines(raw_lines, output_file):
             light_curve = LightCurve(raw_fields[SAMPLE_ID_POS].strip("\"\n"))
         elif record_type == 'SLCE':
             if light_curve.get_number_of_records() != 9:
-                print('Warning: less than 9 records ({}) found in line curve ({})'.
-                      format(light_curve.get_number_of_records(), light_curve.get_first_date_time()))
+                n = light_curve.get_number_of_records()
+                l = raw_line.strip("\n")
+                print(f'Warning: less than 9 records ({n}) found in line curve {l}')
             else:
                 light_curve.write_to_file(output_file)
         elif record_type == 'FO':
