@@ -156,7 +156,7 @@ def open_files(data_path, output_path):
 def main(argv):
     data_path = ''
     output_path = ''
-    opts, args = getopt.getopt(argv, "d:i:o:", ["data=", "ids=", "output="])
+    opts, args = getopt.getopt(argv, "d:o:", ["data=", "output="])
     for opt, arg in opts:
         if opt in ("-d", "--data"):
             data_path = arg
