@@ -3,7 +3,7 @@
 Cleans raw PAM data from multiple WinControl files and creates a single file in a convenient format for analysis with R
 
 Example:
-`python3 pam-data-cleaner-2.0 -d 'example/pam_raw_with_id/*.csv' -o output/clean.csv`
+`python3 pam-cleaner-2.0.py -d 'example/pam_raw_with_id/*.csv' -o output/clean.csv`
 
 Reads all the `csv` files in the folder `example/pam_raw_with_id` and writes out the output to `output/clean.csv`.
 
