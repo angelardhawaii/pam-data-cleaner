@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import getopt
+import argparse
 import glob
 import os.path
 import pathlib
@@ -159,14 +159,13 @@ def open_files(data_path, output_path):
 
 
 def main(argv):
-    data_path = ''
-    output_path = ''
-    opts, args = getopt.getopt(argv, "d:o:", ["data=", "output="])
-    for opt, arg in opts:
-        if opt in ("-d", "--data"):
-            data_path = arg
-        elif opt in ("-o", "--output"):
-            output_path = arg
+    parser = argparse.ArgumentParser(description='Cleans raw PAM data from multiple WinControl files and creates a '
+                                                 'single file in a convenient format for analysis with R')
+    parser.add_argument('-d', '--data',required=True, help='Path to the WinControl files. It accepts wildcards like ''*.csv''.')
+    parser.add_argument('-o', '--output', required=True, help='Output file name where the results are saved.')
+    args = parser.parse_args()
+    data_path = args.data
+    output_path = args.output
     open_files(data_path, output_path)
 
 
