@@ -37,8 +37,17 @@ class OutputRow:
     PSII_FACTOR = 0.5
 
     def __init__(self, raw_fields):
-        self.date = get_value(raw_fields, COL_DATE)
-        self.time = get_value(raw_fields, COL_TIME)
+        if COL_DATE in column_position.keys() and COL_TIME in column_position.keys():
+            self.date = get_value(raw_fields, COL_DATE)
+            self.time = get_value(raw_fields, COL_TIME)
+        elif COL_DATETIME in column_position.keys():
+            datetime = get_value(raw_fields, COL_DATETIME)
+            date_and_time = datetime.split(' ')
+            self.date = date_and_time[0]
+            self.time = date_and_time[1]
+        else:
+            raise AssertionError("Either DATE or DATETIME must be in the source data file.")
+
         self.f = get_value(raw_fields, COL_1F)
         self.fm_prime = get_value(raw_fields, COL_1FM_PRIME)
         self.par = get_value(raw_fields, COL_1PAR)
@@ -106,7 +115,7 @@ def process_raw_lines(raw_lines, output_file):
         raw_fields = raw_line.split(input_separator)
         record_type = get_record_type(raw_fields)
         if record_type == 'SLCS':
-            light_curve = LightCurve(raw_fields[SAMPLE_ID_POS].strip("\"\n"))
+            light_curve = LightCurve(raw_fields[-1].strip("\"\n"))
         elif record_type == 'SLCE':
             if light_curve.get_number_of_records() != 9:
                 n = light_curve.get_number_of_records()
@@ -132,16 +141,18 @@ def process_raw_lines(raw_lines, output_file):
 
 def determine_column_positions(raw_lines):
     global input_separator
+    global column_position
+    column_position = {}
     # read the column names from the raw file to figure out their positions
     for line in raw_lines:
         input_separator = ';' if ';' in line else ','
-        if 'Datetime' in line:
+        if 'Date' + input_separator in line or 'Datetime' + input_separator in line:
             line_with_headers = line.split(input_separator)
             for idx, col in enumerate(line_with_headers):
                 column_position[col.strip("\"\n")] = idx
             break
-    if COL_DATETIME not in column_position.keys():
-        exit("At least one line in the raw PAM data file must contain the headers like Datetime, etc.")
+    if COL_DATETIME not in column_position.keys() and COL_DATE not in column_position.keys():
+        exit("At least one line in the raw PAM data file must contain the headers like Datetime, Date, etc.")
 
 
 def open_files(data_path, output_path):
