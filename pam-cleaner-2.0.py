@@ -146,7 +146,7 @@ def determine_column_positions(raw_lines):
     # read the column names from the raw file to figure out their positions
     for line in raw_lines:
         input_separator = ';' if ';' in line else ','
-        if 'Date' + input_separator in line or 'Datetime' + input_separator in line:
+        if 'Date' + input_separator in line or 'Datetime' + input_separator in line or '"Date"' + input_separator in line or '"Datetime"' + input_separator in line:
             line_with_headers = line.split(input_separator)
             for idx, col in enumerate(line_with_headers):
                 column_position[col.strip("\"\n")] = idx
